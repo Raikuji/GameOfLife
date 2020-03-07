@@ -1,1 +1,4 @@
 *.sbt 
+target/*
+project/*
+.idea/*
