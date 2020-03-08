@@ -41,12 +41,12 @@ object Main extends App {
         val minCol = g.reduceLeft(min)._2
         def go(g:Grille, index: (Int, Int)): Unit = (g, index) match {
             case (Nil, _) => print("\n")
-            case (g, (a, b)) if(b > maxCol) => print("\n")
-                                                  go(g, (a + 1, minCol))
-            case (head::tail, (a, b)) if(head == (a, b)) => print("X")
-                                                            go(tail, (a, b + 1))
-            case (g,  (a, b)) => print(" ")
-                                         go(g, (a, b + 1))
+            case (g, (a, b)) if b > maxCol => print("\n")
+                                              go(g, (a + 1, minCol))
+            case (head::tail, (a, b)) if head == (a, b) => print("X")
+                                                           go(tail, (a, b + 1))
+            case (g, (a, b)) => print(" ")
+                                go(g, (a, b + 1))
         }
         go(g, g.reduceLeft(min))
     }
@@ -59,19 +59,76 @@ object Main extends App {
 
     assert(voisines8(0, 0) == List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)))
 
+    def nNeighbors(g: Grille, neighbors: List[(Int, Int)], n: Int): Int = neighbors match {
+        case Nil => n
+        case head::tail if g contains head => nNeighbors(g, tail, n+1)
+        case _::tail => nNeighbors(g, tail, n)
+    }
+
     def survivantes(g: Grille): Grille = {
-        def nNeighbors(neighbors: List[(Int, Int)], n: Int): Int = (neighbors, n) match {
-            case (Nil, n) => n
-            case (head::tail, n) if(g contains head) => nNeighbors(tail, n+1)
-            case (_::tail, n) => nNeighbors(tail, n)
-        }
-        def go(g: Grille, newGrid: Grille): Grille = g match {
+        def go(grid: Grille, newGrid: Grille): Grille = grid match {
             case Nil => newGrid
-            case head::tail if 2 to 3 contains nNeighbors(voisines8(head._1, head._2), 0) => go(tail, newGrid :+ head)
+            case head::tail if 2 to 3 contains nNeighbors(g, voisines8(head._1, head._2), 0) => go(tail, newGrid :+ head)
             case _::tail => go(tail, newGrid)
         }
         go(g, Nil)
     }
 
     assert(survivantes(List((-1,1), (0,1), (1,2), (2,0), (2,1))) == List((0,1), (1, 2), (2, 1)))
+
+    def reduce(g1: Grille, g2: Grille): Grille = {
+        def go(g1: Grille, g2: Grille, newGrid: Grille): Grille = (g1, g2) match {
+            case (Nil, Nil) => newGrid
+            case (Nil, g) => newGrid ++ g
+            case (g, Nil) => newGrid ++ g
+            case ((a, b)::t1, (c, d)::t2) if a < c => go(t1, (c, d)::t2, newGrid :+ (a, b))
+            case ((a, b)::t1, (c, d)::t2) if a > c => go((a, b)::t1, t2, newGrid :+ (c, d))
+            case ((a, b)::t1, (c, d)::t2) if b < d => go(t1, (c, d)::t2, newGrid :+ (a, b))
+            case ((a, b)::t1, (c, d)::t2) if b > d => go((a, b)::t1, t2, newGrid :+ (c, d))
+            case (h1::t1, h2::t2) => go(t1, t2, newGrid :+ h1)
+        }
+        def go2(g: Grille, newGrid: Grille): Grille = g match {
+            case Nil => newGrid
+            case head::tail if !(newGrid contains head) => go2(tail, newGrid :+ head)
+            case _::tail => go2(tail, newGrid)
+        }
+        if(g2 == Nil) go2(g1, Nil)
+        else go2(go(g1, g2, Nil), Nil)
+    }
+
+    def candidates(g: Grille): Grille = {
+        def go(g: Grille, newGrid: Grille): Grille = g match {
+            case Nil => newGrid
+            case head::tail => go(tail, newGrid ++ voisines8(head._1, head._2))
+        }
+        reduce(go(g, Nil),Nil)
+    }
+
+    assert(candidates(List((0, 0))) == List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)))
+
+    def naissances(g: Grille): Grille = {
+        def go(c: Grille, newGrid: Grille): Grille = c match {
+            case Nil => newGrid
+            case head::tail if nNeighbors(g, voisines8(head._1, head._2), 0) == 3 => go(tail, newGrid :+ head)
+            case head::tail => go(tail, newGrid)
+        }
+        go(candidates(g), Nil)
+    }
+
+    assert(naissances(List((-1,1), (0,1), (1,2), (2,0), (2,1))) == List((0, 2),(1, 0)))
+
+    def jeuDeLaVie(init:Grille, n:Int):Unit = {
+        def go(g: Grille, step: Int): Unit = step match {
+            case s if s < n => afficherGrille(g)
+                                 println("----------------------------------")
+                                 go(reduce(survivantes(g), naissances(g)),s + 1)
+            case _ => afficherGrille(g)
+        }
+        go(init, 0)
+    }
+
+    val config = List("XXX    ",
+                      "  X XX ",
+                      "     X ")
+    jeuDeLaVie(chaineToGrille(config), 8)
 }
