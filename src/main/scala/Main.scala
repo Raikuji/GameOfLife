@@ -3,23 +3,16 @@ object Main extends App {
     type Grille = List[(Int,Int)];
 
     def chaineToGrille(l: List[String]): Grille = {
-        def go1(l: List[String], fl: List[(Int, Int)], row: Int): List[(Int, Int)] = {
-            def go2(l: List[String], fl: List[(Int, Int)], row: Int, column: Int): List[(Int, Int)] = {
-                if(column >= l.length) {
-                    fl
-                } else if(l(column).equals("X")) {
-                    go2(l, fl :+ (row, column), row, column + 1)
-                } else {
-                    go2(l, fl, row, column + 1)
-                }
-            }
-            if(row >= l.length) {
-                fl
-            } else {
-                go1(l, go2(l(row).split("").toList, fl, row, 0), row+1)
-            }
+        def go1(l: List[String], g: Grille, row: Int): Grille = (l, row) match {
+            case (l, r) if l.isEmpty => g
+            case (head::tail, r) => go1(tail, go2(head.split("").toList, g, r, 0), r+1)
         }
-        go1(l, List(), 0)
+        def go2(str: List[String], g: Grille, row: Int, column: Int): List[(Int, Int)] = (str, row, column) match {
+            case (s, _, c) if s.isEmpty => g
+            case (head::tail, r, c) if head.equals("X") => go2(tail, g :+ (r, c), r, c + 1)
+            case (_::tail, r, c) => go2(tail, g, r, c + 1)
+        }
+        go1(l, Nil, 0)
     }
 
     assert(chaineToGrille(List(" XX", "  X", "XXX")) == List((0,1), (0,2), (1,2), (2,0), (2,1), (2,2)))
