@@ -53,9 +53,7 @@ object Main extends App {
 
     //afficherGrille(List((-1,1), (0,1), (1,2), (2,0), (2,1)))
 
-    def voisines8(l: Int, c :Int): List[(Int, Int)] = {
-        List((l-1, c-1), (l-1, c), (l-1, c+1), (l, c-1), (l, c+1), (l+1, c-1), (l+1, c), (l+1, c+1))
-    }
+    def voisines8(l: Int, c :Int): List[(Int, Int)] = List((l-1, c-1), (l-1, c), (l-1, c+1), (l, c-1), (l, c+1), (l+1, c-1), (l+1, c), (l+1, c+1))
 
     assert(voisines8(0, 0) == List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)))
 
@@ -96,6 +94,10 @@ object Main extends App {
         else go2(go(g1, g2, Nil), Nil)
     }
 
+    def sort(g: Grille): Grille = {
+        g.sorted
+    }
+
     def candidates(g: Grille): Grille = {
         def go(g: Grille, newGrid: Grille): Grille = g match {
             case Nil => newGrid
@@ -130,5 +132,81 @@ object Main extends App {
     val config = List("XXX    ",
                       "  X XX ",
                       "     X ")
-    jeuDeLaVie(chaineToGrille(config), 8)
+
+    //jeuDeLaVie(chaineToGrille(config), 8)
+
+    def voisines4(l: Int, c: Int): List[(Int, Int)] = {
+        List((l-1, c),(l, c-1), (l, c+1), (l+1, c))
+    }
+
+    def naitJDLV(nbVoisines: Int): Boolean = nbVoisines == 3
+
+    def meurtJDLV(nbVoisines: Int): Boolean = 2 to 3 contains nbVoisines
+
+    def naitAF(nbVoisines: Int): Boolean = nbVoisines % 2 == 1
+
+    def meurtAF(nbVoisines: Int): Boolean = nbVoisines % 2 == 0
+
+    def survivantesG(g: Grille, f1: (Int, Int) => List[(Int, Int)], f2: Int => Boolean): Grille = {
+        def go(grid: Grille, newGrid: Grille): Grille = grid match {
+            case Nil => newGrid
+            case head :: tail if f2(nNeighbors(g, f1(head._1, head._2), 0)) => go(tail, newGrid :+ head)
+            case _ :: tail => go(tail, newGrid)
+        }
+
+        go(g, Nil)
+    }
+
+    assert(survivantesG(List((-1,1), (0,1), (1,2), (2,0), (2,1)), voisines8, meurtJDLV) == List((0,1), (1, 2), (2, 1)))
+
+    def candidatesG(g: Grille, f: (Int, Int) => List[(Int, Int)]): Grille = {
+        def go(g: Grille, newGrid: Grille): Grille = g match {
+            case Nil => newGrid
+            case head::tail => go(tail, newGrid ++ f(head._1, head._2))
+        }
+        sort(reduce(go(g, Nil),Nil))
+    }
+
+    assert(candidatesG(List((0, 0)), voisines8) == List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)))
+
+    def naissancesG(g: Grille, f1: (Int, Int) => List[(Int, Int)], f2: Int => Boolean): Grille = {
+        def go(c: Grille, newGrid: Grille): Grille = c match {
+            case Nil => newGrid
+            case head::tail if f2(nNeighbors(g, f1(head._1, head._2), 0)) => go(tail, newGrid :+ head)
+            case head::tail => go(tail, newGrid)
+        }
+        go(candidatesG(g, f1), Nil)
+    }
+
+    assert(naissancesG(List((-1,1), (0,1), (1,2), (2,0), (2,1)), voisines8, naitJDLV) == List((0, 2),(1, 0)))
+
+    def moteur(init:Grille, n:Int, f1: (Int, Int) => List[(Int, Int)], f2: Int => Boolean, f3: Int => Boolean):Unit = {
+        def go(g: Grille, step: Int): Unit = step match {
+            case s if s < n => afficherGrille(g)
+                println("----------------------------------")
+                go(sort(reduce(survivantesG(g, f1, f2), naissancesG(g, f1, f3))),s + 1)
+            case _ => afficherGrille(g)
+        }
+        go(init, 0)
+    }
+
+    //moteur(chaineToGrille(List("XX")), 20, voisines4, meurtAF, naitAF)
+
+    def gameOfLife(init: Grille, n: Int): Unit = {
+        moteur(init, n, voisines8, meurtJDLV, naitJDLV)
+    }
+
+    def freudkinAutomata(init: Grille, n: Int): Unit = {
+        moteur(init, n, voisines4, meurtAF, naitAF)
+    }
+
+    def voisineDiago4(x: Int, y: Int): Grille = {
+        List((x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1))
+    }
+
+    def variantFreudkinAutomata(init: Grille, n: Int) = {
+        moteur(init, n, voisineDiago4, meurtAF, naitAF)
+    }
+
+    variantFreudkinAutomata(chaineToGrille(List("X, X")), 20)
 }
