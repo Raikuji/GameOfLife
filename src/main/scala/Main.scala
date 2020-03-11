@@ -3,10 +3,12 @@ object Main extends App {
     type Grille = List[(Int,Int)];
 
     def chaineToGrille(l: List[String]): Grille = {
+        @scala.annotation.tailrec
         def go1(l: List[String], g: Grille, row: Int): Grille = (l, row) match {
             case (l, r) if l.isEmpty => g
             case (head::tail, r) => go1(tail, go2(head.split("").toList, g, r, 0), r+1)
         }
+        @scala.annotation.tailrec
         def go2(str: List[String], g: Grille, row: Int, column: Int): List[(Int, Int)] = (str, row, column) match {
             case (s, _, c) if s.isEmpty => g
             case (head::tail, r, c) if head.equals("X") => go2(tail, g :+ (r, c), r, c + 1)
@@ -32,6 +34,7 @@ object Main extends App {
         }
         val maxCol = g.reduceLeft(max)._2
         val minCol = g.reduceLeft(min)._2
+        @scala.annotation.tailrec
         def go(g:Grille, index: (Int, Int)): Unit = (g, index) match {
             case (Nil, _) => print("\n")
             case (g, (a, b)) if b > maxCol => print("\n")
@@ -50,6 +53,7 @@ object Main extends App {
 
     assert(voisines8(0, 0) == List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)))
 
+    @scala.annotation.tailrec
     def nNeighbors(g: Grille, neighbors: List[(Int, Int)], n: Int): Int = neighbors match {
         case Nil => n
         case head::tail if g contains head => nNeighbors(g, tail, n+1)
@@ -68,6 +72,7 @@ object Main extends App {
     assert(survivantes(List((-1,1), (0,1), (1,2), (2,0), (2,1))) == List((0,1), (1, 2), (2, 1)))
 
     def reduce(g1: Grille, g2: Grille): Grille = {
+        @scala.annotation.tailrec
         def go(g1: Grille, g2: Grille, newGrid: Grille): Grille = (g1, g2) match {
             case (Nil, Nil) => newGrid
             case (Nil, g) => newGrid ++ g
@@ -78,6 +83,7 @@ object Main extends App {
             case ((a, b)::t1, (c, d)::t2) if b > d => go((a, b)::t1, t2, newGrid :+ (c, d))
             case (h1::t1, h2::t2) => go(t1, t2, newGrid :+ h1)
         }
+        @scala.annotation.tailrec
         def go2(g: Grille, newGrid: Grille): Grille = g match {
             case Nil => newGrid
             case head::tail if !(newGrid contains head) => go2(tail, newGrid :+ head)
@@ -92,6 +98,7 @@ object Main extends App {
     }
 
     def candidates(g: Grille): Grille = {
+        @scala.annotation.tailrec
         def go(g: Grille, newGrid: Grille): Grille = g match {
             case Nil => newGrid
             case head::tail => go(tail, newGrid ++ voisines8(head._1, head._2))
@@ -102,6 +109,7 @@ object Main extends App {
     assert(candidates(List((0, 0))) == List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)))
 
     def naissances(g: Grille): Grille = {
+        @scala.annotation.tailrec
         def go(c: Grille, newGrid: Grille): Grille = c match {
             case Nil => newGrid
             case head::tail if nNeighbors(g, voisines8(head._1, head._2), 0) == 3 => go(tail, newGrid :+ head)
@@ -113,9 +121,10 @@ object Main extends App {
     assert(naissances(List((-1,1), (0,1), (1,2), (2,0), (2,1))) == List((0, 2),(1, 0)))
 
     def jeuDeLaVie(init:Grille, n:Int):Unit = {
+        @scala.annotation.tailrec
         def go(g: Grille, step: Int): Unit = step match {
             case s if s < n => afficherGrille(g)
-                                 println("----------------------------------")
+                println("\nEtape " + n + " : \n")
                                  go(reduce(survivantes(g), naissances(g)),s + 1)
             case _ => afficherGrille(g)
         }
@@ -153,6 +162,7 @@ object Main extends App {
     assert(survivantesG(List((-1,1), (0,1), (1,2), (2,0), (2,1)), voisines8, meurtJDLV) == List((0,1), (1, 2), (2, 1)))
 
     def candidatesG(g: Grille, f: (Int, Int) => List[(Int, Int)]): Grille = {
+        @scala.annotation.tailrec
         def go(g: Grille, newGrid: Grille): Grille = g match {
             case Nil => newGrid
             case head::tail => go(tail, newGrid ++ f(head._1, head._2))
@@ -163,6 +173,7 @@ object Main extends App {
     assert(candidatesG(List((0, 0)), voisines8) == List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)))
 
     def naissancesG(g: Grille, f1: (Int, Int) => List[(Int, Int)], f2: Int => Boolean): Grille = {
+        @scala.annotation.tailrec
         def go(c: Grille, newGrid: Grille): Grille = c match {
             case Nil => newGrid
             case head::tail if f2(nNeighbors(g, f1(head._1, head._2), 0)) => go(tail, newGrid :+ head)
@@ -174,10 +185,11 @@ object Main extends App {
     assert(naissancesG(List((-1,1), (0,1), (1,2), (2,0), (2,1)), voisines8, naitJDLV) == List((0, 2),(1, 0)))
 
     def moteur(init:Grille, n:Int, f1: (Int, Int) => List[(Int, Int)], f2: Int => Boolean, f3: Int => Boolean):Unit = {
+        @scala.annotation.tailrec
         def go(g: Grille, step: Int): Unit = step match {
             case s if s < n => afficherGrille(g)
-                println("----------------------------------")
-                go(sort(reduce(survivantesG(g, f1, f2), naissancesG(g, f1, f3))),s + 1)
+                               println("\nEtape " + n + " : \n")
+                               go(sort(reduce(survivantesG(g, f1, f2), naissancesG(g, f1, f3))),s + 1)
             case _ => afficherGrille(g)
         }
         go(init, 0)
@@ -197,9 +209,9 @@ object Main extends App {
         List((x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1))
     }
 
-    def variantFreudkinAutomata(init: Grille, n: Int) = {
+    def variantFreudkinAutomata(init: Grille, n: Int): Unit = {
         moteur(init, n, voisineDiago4, meurtAF, naitAF)
     }
 
-    variantFreudkinAutomata(chaineToGrille(List("X, X")), 20)
+    variantFreudkinAutomata(chaineToGrille(List("X", " X")), 70)
 }
